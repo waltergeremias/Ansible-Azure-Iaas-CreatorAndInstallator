@@ -1,0 +1,143 @@
+#---
+all:
+  vars:
+    ##AZURE DATA
+    #AZURE_AD_USER: '$GITLAB_USER_LOGIN@gmail.com'
+    #AZURE_PASSWORD:
+    AZURE_SUBSCRIPTION: 'AZURE_SUBSCRIPTION'
+    AZURE_TENANT: 'AZURE_TENANT'
+    ###
+    env_name: "SomeName"
+    vm_user_name: "Administrator"
+    domain: "SomeDomain"
+    password: "123456"
+    location: eastus
+    resource_group: "SomeRGname"
+    regionprefix: "-E"
+    region: "-EAST"
+    dnssufix: "eastus.com"
+    Subnet_1_address: "11.1.0.0/16"
+    DNS_Subnet_1_address: "8.8.8.8,4.4.4.4"
+    Subnet_2_address: "11.2.0.0/16"
+    DNS_Subnet_2_address: "8.8.8.8,4.4.4.4"
+    #Subnet_3_address: "10.3.0.0/16"    
+    DNS_Subnet_3_address: "8.8.8.8,4.4.4.4"
+    #Subnet_4_address: "10.4.0.0/16"
+    DNS_Subnet_4_address: "8.8.8.8,4.4.4.4"
+    #Subnet_5_address: "10.5.0.0/16"
+    DNS_Subnet_5_address: "8.8.8.8,4.4.4.4"
+    #Subnet_6_address: "10.6.0.0/16"
+    DNS_Subnet_6_address: "8.8.8.8,4.4.4.4"
+    #Script
+    portSFTP: "8080" 
+    OctoPort: "6443"
+    thum_octo_srv: "3D1D"
+    OctoServer: "http://SOMEOCTOPUS.westus.cloudapp.azure.com"
+    OctoIP: "11.11.11.11"
+    OctoAPI: "API-NAME"
+    mssql_user: "user"
+    mssql_password: "user"
+    oracledb_user: "USER"
+    oracledb_password: "123456"
+    Rabbit_User: "admin"
+    Rabbit_Pass: "admin"
+
+
+APP:
+  vars:    
+    availSET: "av_APP"
+    vmw_Size: "Standard_B2s"
+    start_vm: "yes"
+    #OS
+    vm_OS: "Windows"
+    license_OS_type: "Windows_Server"
+    #Image
+    offer_OS: "WindowsServer"
+    publisher_OS: "MicrosoftWindowsServer"
+    SKU_version: "2019-Datacenter"
+    version_OS: "latest"   
+    #Disks
+    os_disk_size: "128"
+    os_disk_type: "Standard_LRS"
+    #D_disk_size: "64"
+    #D_disk_type: "Standard_LRS"
+    #E_disk_size: "128" 
+    #E_disk_type: "Standard_LRS"
+    #Public_IP
+    Subnet-Group: "1"
+    public_ip: "yes"
+    nginx_public: "yes"
+    rabbitmq: "yes"
+    octo_client: "yes"
+    octo_roles: "cbo-app cbo-db cbo-git"
+##    mssql_db: "yes" 
+  hosts:
+    APP-1:
+      ip_host: 11.1.0.100
+    APP-2: 
+      ip_host: 11.2.0.100
+    APP-3:
+      ip_host: 11.2.0.101
+
+INTAPP:
+  vars:
+    availSET: "av_IOP" 
+    vmw_Size: "Standard_B2s"
+    start_vm: "yes"
+    #OS
+    vm_OS: "Windows"
+    license_OS_type: "Windows_Server"
+    #Image
+    offer_OS: "WindowsServer"
+    publisher_OS: "MicrosoftWindowsServer"
+    SKU_version: "2019-Datacenter"
+    version_OS: "latest"
+    #Disks
+    os_disk_size: "128"
+    os_disk_type: "Standard_LRS"
+    #D_disk_size: "64"
+    #D_disk_type: "Standard_LRS"
+    #E_disk_size: "120"
+    #E_disk_type: "Standard_LRS"
+    #Public_IP
+    Subnet-Group: "2"
+    public_ip: "yes"
+    #oracle_db19: "yes" 
+ ##   oracle_db18xe: "yes" 
+    octo_client: "yes"
+    octo_roles: "iop-app iop-db cbo-app"
+  hosts:
+    INT-1:
+      ip_host: 11.2.0.100
+    
+DOCKER:
+  vars:
+    #availSET: "" 
+    vmw_Size: "Standard_B2s"
+    #start_vm: "no"
+    #OS
+    vm_OS: "Linux"
+    #license_OS_type: "Ubuntu_Server"
+    #Image
+    offer_OS: "UbuntuServer"
+    publisher_OS: "Canonical"
+    SKU_version: "16.04-LTS"
+    version_OS: "latest"
+    #Disks
+    os_disk_size: "64"
+    os_disk_type: "Standard_LRS"
+    #D_disk_size: "64"
+    #D_disk_type: "Standard_LRS"
+    #E_disk_size: "120"
+    #E_disk_type: "Standard_LRS"
+    #Public_IP
+    Subnet-Group: "1"
+    public_ip: "yes"
+    rabbitmq: "yes"  
+  hosts:
+    LIN-1:
+      ip_host: 11.1.0.10      
+    LIN-2:
+      ip_host: 11.1.0.11
+    LIN-3: 
+      ip_host: 11.1.0.12 

@@ -1,0 +1,255 @@
+--- 
+
+  - name: convert script Funda.ps1
+    shell: "cat templates/Funda.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: Funda_data
+ 
+  - name: Encode data and store as fact    
+    set_fact:      
+      Funda1_data: '{{ Funda_data.stdout }}'
+   
+  - name: Install Fundamentals
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{Funda1_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].public_ip == "yes" and hostvars[item].vm_OS|lower == "windows"
+
+##Install Octopus
+  - name: convert script OctoCopy.ps1
+    shell: "cat templates/OctoCopy.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: OctoCopy_data
+
+  - name: Encode data and store as fact
+    set_fact:
+      OctoCopy1_data: '{{ OctoCopy_data.stdout }}'
+
+  - name: Install OctoScript
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{OctoCopy1_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].octo_client is defined and hostvars[item].octo_client == "yes" and hostvars[item].vm_OS|lower == "windows"
+
+
+  - name: copy octo template
+    template:
+      src: templates/octo_template.ps1
+      dest: templates/octoscript.ps1
+  - name: convert script    
+    shell: "cat templates/octoscript.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: octo_data
+  - name: Encode data and store as fact
+    set_fact:      
+      octoscript_data: '{{ octo_data.stdout }}'
+
+  - name: Install Octopus Client
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{octoscript_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].octo_client is defined and hostvars[item].octo_client == "yes" and hostvars[item].vm_OS|lower == "windows"
+
+
+##Install Rabbit Windows
+
+  - name: convert script rabbit.ps1
+    shell: "cat templates/rabbit.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: Rabbit_data
+
+  - name: Encode data and store as fact
+    set_fact:
+      Rabbit1_data: '{{ Rabbit_data.stdout }}'
+
+  - name: Install Rabbit
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{Rabbit1_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "windows"
+
+
+  - name: copy script Rabbit2 template
+    template:
+      src: templates/rabbit2_template.ps1
+      dest: templates/rabbit2.ps1
+
+  - name: convert script rabbit2.ps1
+    shell: "cat templates/rabbit2.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: Rabbit_data2
+
+
+  - name: Encode data and store as fact
+    set_fact:
+      Rabbit2_data: '{{ Rabbit_data2.stdout }}'
+
+  - name: add Rabbit Users
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{Rabbit2_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "windows"
+
+
+
+##Rabbit Linux
+
+  - name: Install python-software-properties
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'sudo apt-get install -y python3-software-properties'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "linux"
+
+
+  - name: add trusted key 
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com  'sudo curl -fsSL https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc | sudo apt-key add - & sudo apt-key adv --keyserver 'hkps://keys.openpgp.org' --recv-keys '0x0A9AF2115F4687BD29803A206B73A36E6026DFCA' & sudo apt-get install apt-transport-https'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "linux"
+
+
+
+  - name: add Rabbitmq Repository
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'sudo add-apt-repository 'deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang' & sudo apt-get update -y'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "linux"
+
+
+
+  - name: Install rabbitmq package
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'sudo apt-get install -y rabbitmq-server'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "linux"
+
+  
+  - name: Start rabbitmq service
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'sudo service rabbitmq-server start'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "linux"
+
+
+
+  - name: Enable rabbitmq plugins
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'sudo rabbitmq-plugins enable rabbitmq_management rabbitmq_tracing rabbitmq_federation'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "linux"
+
+
+  - name: add user
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'sudo rabbitmqctl add_user {{Rabbit_User}} {{Rabbit_Pass}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "linux"
+
+#  - name: add user permissions
+#    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'sudo rabbitmqctl set_user_tags admin administrator & sudo rabbitmqctl set_permissions -p / admin '.*' '.*' '.*''"
+#    ignore_errors: true
+#    with_inventory_hostnames:
+#      - all
+#    when: hostvars[item].rabbitmq is defined and hostvars[item].rabbitmq == "yes" and hostvars[item].vm_OS|lower == "linux"
+
+
+
+##Install OracleDB19
+
+  - name: copy script Oracle19 template
+    template:
+      src: templates/Oracle_template19.ps1
+      dest: templates/Oracle19.ps1
+
+  - name: convert script Oracle19.ps1
+    shell: "cat templates/Oracle19.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: Oracle_data
+
+  - name: Encode data and store as fact
+    set_fact:
+      Oracle19_data: '{{ Oracle_data.stdout }}'
+
+  - name: Install Oracle DB on Windows
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{Oracle19_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].oracle_db19 is defined and hostvars[item].oracle_db19 == "yes" and hostvars[item].vm_OS|lower == "windows"
+
+##Install OracleDB18XE
+
+  - name: copy script Oracle18XE template
+    template:
+      src: templates/Oracle_template18xe.ps1
+      dest: templates/Oracle18xe.ps1
+
+  - name: convert script Oracle18xe.ps1
+    shell: "cat templates/Oracle18xe.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: Oracle18_data
+
+  - name: Encode data and store as fact
+    set_fact:
+      Oracle18xe_data: '{{ Oracle18_data.stdout }}'
+
+  - name: Install Oracle DB on Windows
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{Oracle18xe_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].oracle_db18xe is defined and hostvars[item].oracle_db18xe == "yes" and hostvars[item].vm_OS|lower == "windows"
+    ignore_errors: True
+
+## Expand MSSQLDB
+
+  - name: copy script MSSQL template
+    template:
+      src: templates/mssql_template.ps1
+      dest: templates/mssql.ps1
+
+  - name: convert script mssql.ps1
+    shell: "cat templates/mssql.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: mssql_data
+
+  - name: Encode data and store as fact
+    set_fact:
+      mssql1_data: '{{ mssql_data.stdout }}'
+
+  - name: Expand MSSQL DB on Windows
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{mssql1_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].mssql_db is defined and hostvars[item].mssql_db == "yes" and hostvars[item].vm_OS|lower == "windows"
+
+##Install MSSQLDB
+
+  - name: copy script MSSQL template
+    template:
+      src: templates/mssql_template2.ps1
+      dest: templates/mssql2.ps1
+
+  - name: convert script mssql2.ps1
+    shell: "cat templates/mssql2.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: mssql_data2
+
+  - name: Encode data and store as fact
+    set_fact:
+      mssql2_data: '{{ mssql_data2.stdout }}'
+
+  - name: Install MSSQL DB on Windows
+    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe Set-ExecutionPolicy Bypass -Scope Process -Force; powershell.exe -enc {{mssql2_data}}'"
+    with_inventory_hostnames:
+      - all
+    when: hostvars[item].mssql_db is defined and hostvars[item].mssql_db == "yes" and hostvars[item].vm_OS|lower == "windows"
+    ignore_errors: True
+
+
+##Reinstall Octo Client
+#  - name: copy octo template2
+#    template:
+#      src: templates/octo_template2.ps1
+#      dest: templates/octoscript2.ps1
+#  - name: convert script2
+#    shell: "cat templates/octoscript2.ps1 | iconv -t UTF-16LE |base64 -w0"
+#    register: octo_data2
+#  - name: Encode data and store as fact
+#    set_fact:
+#      octoscript_data2: '{{ octo_data2.stdout }}'
+#
+#  - name: Install Octopus Client
+#    shell: "ssh -o 'StrictHostKeyChecking no' -p {{ portSFTP }} -i private.key  {{ vm_user_name }}@{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}.{{ location }}.cloudapp.azure.com 'powerShell.exe -ExecuTionPolicy allsigned -enc {{octoscript_data2}}'"
+#    with_inventory_hostnames:
+#      - all
+#    when: hostvars[item].octo_client is defined and hostvars[item].octo_client == "yes" and hostvars[item].vm_OS|lower == "windows"

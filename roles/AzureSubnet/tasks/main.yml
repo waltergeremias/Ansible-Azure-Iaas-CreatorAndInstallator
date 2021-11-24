@@ -1,0 +1,229 @@
+##Subnet_1
+- name: Create a virtual network Subnet_1
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_1"
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_1_address }}"
+    dns_servers: "{{ DNS_Subnet_1_address }}"
+  ignore_errors: true
+  when: del_env is undefined and Subnet_1_address is defined
+
+
+
+- name: Create a subnet refer nsg "{{ env_name }}{{ regionprefix }}-Subnet_1"
+  azure_rm_subnet:
+    resource_group: "{{ resource_group }}"
+    virtual_network_name: "{{ env_name }}{{ regionprefix }}-Subnet_1"
+    name: "Subnet{{ region }}-1"
+    address_prefix_cidr: "{{ Subnet_1_address }}"
+    state: "{{ delete_env }}"
+    security_group:
+      name: "{{ env_name }}{{ regionprefix }}"
+      resource_group: "{{ resource_group }}"
+  when: del_env is undefined and Subnet_1_address is defined
+
+
+- name: Delete a virtual network  Subnet_1
+  azure_rm_virtualnetwork:    
+    resource_group: "{{ resource_group }}"    
+    location: "{{ location }}"    
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_1"    
+    state: "{{ delete_env }}"    
+    address_prefixes_cidr:        
+      - "{{ Subnet_1_address }}"    
+    dns_servers:  "{{ DNS_Subnet_1_address }}"
+  ignore_errors: true  
+  when: del_env is defined and Subnet_1_address is defined
+
+
+
+##Subnet_2
+
+- name: Create a virtual network Subnet_2
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_2" 
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_2_address }}" 
+    dns_servers: "{{ DNS_Subnet_2_address }}" 
+  ignore_errors: true
+  when: del_env is undefined and Subnet_2_address is defined
+
+                                                                                                                                                                                                                              
+- name: Create a subnet refer nsg "{{ env_name }}{{ regionprefix }}-Subnet_2" 
+  azure_rm_subnet:
+    resource_group: "{{ resource_group }}"
+    virtual_network_name: "{{ env_name }}{{ regionprefix }}-Subnet_2" 
+    name: "Subnet{{ region }}-2"
+    address_prefix_cidr: "{{ Subnet_2_address }}"
+    state: "{{ delete_env }}"
+    security_group:
+      name: "{{ env_name }}{{ regionprefix }}"
+      resource_group: "{{ resource_group }}"
+  when: del_env is undefined and Subnet_2_address is defined
+
+
+- name: Delete a virtual network  Subnet_2
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_2"                                                                                                  
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_2_address }}"                         
+    dns_servers: "{{ DNS_Subnet_2_address }}"
+  ignore_errors: true
+  when: del_env is defined and Subnet_2_address is defined 
+
+
+##Subnet_3                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+- name: Create a virtual network Subnet_3
+  azure_rm_virtualnetwork:                                                                                                                                                                                                        
+    resource_group: "{{ resource_group }}"                                                                                                                                                                                        
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_3"                                                                                                                                                                             
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_3_address }}"        
+    dns_servers: "{{ DNS_Subnet_3_address }}"
+  when: del_env is undefined and Subnet_3_address is defined  
+  
+- name: Create a subnet refer nsg "{{ env_name }}{{ regionprefix }}-Subnet_3"
+  azure_rm_subnet:
+    resource_group: "{{ resource_group }}"
+    virtual_network_name: "{{ env_name }}{{ regionprefix }}-Subnet_3"                                                                                                                                                             
+    name: "Subnet{{ region }}-3"                                                                                                                                                                                                    
+    address_prefix_cidr: 
+        - "{{ Subnet_3_address }}"
+    state: "{{ delete_env }}"
+    security_group:
+      name: "{{ env_name }}{{ regionprefix }}"                                                                                                                                                                                      
+      resource_group: "{{ resource_group }}"
+  when: del_env is undefined and Subnet_3_address is defined                                                                                                                                                                                                                                                                                                                                                                                                
+
+- name: Delete a virtual network  Subnet_3
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_3"
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_3_address }}"
+    dns_servers: "{{ DNS_Subnet_3_address }}"
+  ignore_errors: true
+  when: del_env is defined and Subnet_3_address is defined 
+
+##Subnet_4
+- name: Create a virtual network Subnet_4
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"   
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_4" 
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_4_address }}"
+    dns_servers: "{{ DNS_Subnet_4_address }}"
+  when: del_env is undefined and Subnet_4_address is defined  
+  
+- name: Create a subnet refer nsg "{{ env_name }}{{ regionprefix }}-Subnet_4"
+  azure_rm_subnet:
+    resource_group: "{{ resource_group }}"
+    virtual_network_name: "{{ env_name }}{{ regionprefix }}-Subnet_4"
+    name: "Subnet{{ region }}-4"
+    address_prefix_cidr: "{{ Subnet_4_address }}"
+    state: "{{ delete_env }}"
+    security_group:
+      name: "{{ env_name }}{{ regionprefix }}"
+      resource_group: "{{ resource_group }}"
+  when: del_env is undefined and Subnet_4_address is defined
+
+- name: Delete a virtual network  Subnet_4
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_4"
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_4_address }}"
+    dns_servers: "{{ DNS_Subnet_4_address }}"
+  ignore_errors: true
+  when: del_env is defined and Subnet_4_address is defined
+
+
+##Subnet_5
+- name: Create a virtual network Subnet_5
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"   
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_5" 
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_5_address }}"
+    dns_servers: "{{ DNS_Subnet_5_address }}"
+  when: del_env is undefined and Subnet_5_address is defined  
+  
+- name: Create a subnet refer nsg "{{ env_name }}{{ regionprefix }}-Subnet_5"
+  azure_rm_subnet:
+    resource_group: "{{ resource_group }}"
+    virtual_network_name: "{{ env_name }}{{ regionprefix }}-Subnet_5"
+    name: "Subnet{{ region }}-5"
+    address_prefix_cidr: "{{ Subnet_5_address }}"
+    state: "{{ delete_env }}"
+    security_group:
+      name: "{{ env_name }}{{ regionprefix }}"
+      resource_group: "{{ resource_group }}"
+  when: del_env is undefined and Subnet_5_address is defined
+
+- name: Delete a virtual network  Subnet_5
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_5"
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_5_address }}"
+    dns_servers: "{{ DNS_Subnet_5_address }}"
+  ignore_errors: true
+  when: del_env is defined and Subnet_5_address is defined
+
+
+##Subnet_6
+- name: Create a virtual network Subnet_6
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"   
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_6" 
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_6_address }}"
+    dns_servers: "{{ DNS_Subnet_6_address }}"
+  when: del_env is undefined and Subnet_6_address is defined  
+  
+- name: Create a subnet refer nsg "{{ env_name }}{{ regionprefix }}-Subnet_6"
+  azure_rm_subnet:
+    resource_group: "{{ resource_group }}"
+    virtual_network_name: "{{ env_name }}{{ regionprefix }}-Subnet_6"
+    name: "Subnet{{ region }}-6"
+    address_prefix_cidr: "{{ Subnet_6_address }}"
+    state: "{{ delete_env }}"
+    security_group:
+      name: "{{ env_name }}{{ regionprefix }}"
+      resource_group: "{{ resource_group }}"
+  when: del_env is undefined and Subnet_6_address is defined
+
+- name: Delete a virtual network  Subnet_6
+  azure_rm_virtualnetwork:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ env_name }}{{ regionprefix }}-Subnet_6"
+    state: "{{ delete_env }}"
+    address_prefixes_cidr:
+        - "{{ Subnet_6_address }}"
+    dns_servers: "{{ DNS_Subnet_6_address }}"
+  ignore_errors: true
+  when: del_env is defined and Subnet_6_address is defined

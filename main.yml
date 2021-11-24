@@ -1,0 +1,223 @@
+
+---
+
+- name: Init Script
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: availabilityset, delete_env: "{{ del_env | default('present', true) }}", when: del_env is undefined }
+
+  tasks:
+  - name: Find my public ip
+    uri:
+      url: 'http://ifconfig.me/ip'
+      return_content: yes
+    register: ip_response
+  - debug: msg='Public IP {{ ip_response }}'
+
+  - name: show all the hosts matching to create
+    debug:
+      msg: "{{ item }}"
+    with_inventory_hostnames:
+      - all
+    register: host_tocreate
+    when: del_env is undefined
+
+##  - name: dig octopus server
+##    debug: msg="{{ lookup('dig', "{{OctoServer}}" )}}"
+##    register: OctoIP
+
+  - file:
+      path: private.key
+      owner: root
+      group: root
+      mode: 0644
+  - file:
+      path: "{{ item }}"
+      state: absent
+    with_items: 
+       - /root/.ssh/known_hosts
+       - templates/octoscript.ps1
+       - templates/octoscript2.ps1
+       - templates/rabbit2.ps1
+       - templates/Oracle19.ps1
+       - templates/Oracle18xe.ps1
+       - templates/mssql.ps1
+       - templates/mssql2.ps1
+       - templates/OctopusServer.sh
+       - templates/script.ps1
+       - templates/script2.ps1
+       - templates/scriptPS.ps1 
+       - templates/OctoHost.yaml
+
+  - name: show all the hosts matching to create on Octopus
+    debug:
+      msg: "{{ item }}"
+    loop: "{{ query('inventory_hostnames', 'all')| flatten(1) }}"
+    loop_control:
+      pause: 1
+    ##with_inventory_hostnames: "{{ groups['all'] |list }}"
+    register: hostocto_tocreate
+    when: del_env is undefined and hostvars[item].octo_client is defined and hostvars[item].octo_client == "yes" and hostvars[item].vm_OS|lower == "windows" and item.skipped is undefined
+#hostvars[item].skipped is undefined
+
+  - name: hostocto_tocreate
+    debug: msg="{{ hostocto_tocreate }}"
+ 
+  - name: set OctopusVM
+    set_fact: OctopusVM="{{ item.results }}"
+##    with_list: "{{hostocto_tocreate }}"
+    #loop: "{{hostocto_tocreate.results}}"
+    loop: "{{ query('vars', 'hostocto_tocreate') }}"
+    loop_control:
+      label: "{{ item }}"  
+      pause: 1 
+    when: item.skipped is undefined
+  
+  - name: OctopusVM debug
+    debug: msg="{{ item}}"
+    #loop: "{{ lookup('vars', 'OctopusVMS', wantlist=True) }}"
+    #loop_control:
+    #  pause: 1
+    with_indexed_items: "{{ OctopusVM }}"
+    when: item.skipped is undefined
+
+  - name: set OctopusVMS     
+    set_fact: OctopusVMS="{{ item }}"
+    with_indexed_items: "{{ OctopusVM }}"
+    when: item.skipped is undefined
+    
+  - name: OctopusVMS11 debug 
+    debug: msg="{{ item}}"     
+    #loop: "{{ lookup('vars', 'OctopusVMS', wantlist=True) }}"  
+    #loop_control:  
+    #  pause: 1  
+    with_indexed_items: "{{ OctopusVM }}"   
+    when: item.skipped is undefined 
+
+  - name: Load private.key    
+    shell: 'cat private.key'
+    register: private_key
+    when: del_env is undefined
+ 
+  - name: Load public.key 
+    shell: 'cat public.key' 
+    register: public_key
+    when: del_env is undefined
+
+  - name: copy script template
+    template: 
+      src: templates/script_template.ps1
+      dest: templates/script.ps1
+    when: del_env is undefined
+
+  - name: copy script template2
+    template:
+      src: templates/script_template2.ps1
+      dest: templates/script2.ps1
+    when: del_env is undefined
+
+  - name: convert script
+    shell: "cat templates/script.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: slu_data
+    when: del_env is undefined
+
+  - name: Encode data and store as fact
+    set_fact:      
+      script_data: '{{ slu_data.stdout }}'
+    when: del_env is undefined
+  
+  - name: convert script2    
+    shell: "cat templates/script2.ps1 | iconv -t UTF-16LE |base64 -w0"
+    register: slu_data2
+    when: del_env is undefined
+
+  - name: Encode data2 and store as fact
+    set_fact:
+      script_data2: '{{ slu_data2.stdout }}'
+    when: del_env is undefined
+
+  - name: Detach VM
+    shell: 'az vm deallocate --no-wait --resource-group {{ resource_group }} --name {{ item }}'
+    with_inventory_hostnames:      
+      - all
+    when: del_env is defined
+
+  - name: Change Mode
+    local_action: command chmod 0400 private.key
+
+- name: Create Network Security Group on RG "{{ hostvars['resource_group'] }}"        
+  hosts: localhost
+  roles:
+    - { role: AzureSecGroup, delete_env: "{{ del_env | default('present', true) }}", when: del_env is undefined }
+
+- name: Create Network Subnet on RG "{{ hostvars['resource_group'] }}" 
+  hosts: localhost
+  gather_facts: True
+  roles:
+    - { role: AzureSubnet, delete_env: "{{ del_env | default('present', true) }}", when: del_env is undefined }  
+
+- name: Install VM's on Azure in RG "{{ hostvars['resource_group'] }}"
+  gather_facts: True
+  hosts: localhost 
+  roles:
+    - { role: createvmWIN, delete_env: "{{ del_env | default('present', true) }}" } 
+
+- name: Install SSH
+  hosts: localhost
+  gather_facts: True 
+  roles:
+    - { role: openssh, host_create: "{{ host_tocreate }}", script_ps1: "{{ script_data }}", script2_ps1: "{{ script_data2 }}", delete_env: "{{ del_env | default('present', true) }}", when: del_env is undefined }
+
+- name: Copy Programs
+  hosts: localhost
+  gather_facts: True
+  become: true
+  roles:
+    - { role: copyPRG, when: del_env is undefined }
+###- name: Octopus Server 
+##  hosts: localhost
+##  gather_facts: no
+##  roles:
+##    - { role: OctopusServer, hostocto_create: "{{ hostocto_tocreate }}", when: del_env is undefined }
+
+- name: Octopus add to Server   
+  hosts: localhost  
+  gather_facts: no  
+  roles:  
+    - { role: OctopusServerADD, OctopusVMS1: "{{ hostocto_tocreate }}", when: del_env is undefined }
+
+- name: Octopus del from Server   
+  hosts: localhost  
+  gather_facts: no  
+  roles:  
+    - { role: OctopusServerDEL, OctopusVMS1: "{{ hostocto_tocreate }}", when: del_env is defined }
+
+
+
+#with_indexed_items: "{{OctopusVMS.item}}", when: del_env is undefined } 
+#      with_items: hostocto_create.results      
+   
+#  loop: "{{hostocto_create.results}}"
+#  when: item.skipped is undefined
+
+- name: Delete AvailabilitySet on RG "{{ hostvars['resource_group'] }}" 
+  hosts: localhost
+  roles:
+    - { role: availabilityset, delete_env: "{{ del_env | default('present', true) }}", when: del_env is defined }
+
+- name: Delete Network Subnet on RG "{{ hostvars['resource_group'] }}"
+  hosts: localhost
+  roles:
+    - { role: AzureSubnet, delete_env: "{{ del_env | default('present', true) }}", when: del_env is defined }
+
+- name: Delete Network Security Group on RG "{{ hostvars['resource_group'] }}"  
+  hosts: localhost  
+  roles:     
+    - { role: AzureSecGroup, delete_env: "{{ del_env | default('present', true) }}", when: del_env is defined }
+
+
+
+
+
+

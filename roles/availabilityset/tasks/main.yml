@@ -1,0 +1,10 @@
+- name: Create an availability set 
+  azure_rm_availabilityset:
+    name: "{{ hostvars[item]['availSET'] }}"
+    location: "{{ location }}"
+    resource_group: "{{ resource_group }}"
+    sku: Aligned
+    state: "{{ delete_env }}"
+  with_inventory_hostnames:
+      - all
+  when: hostvars[item].availSET is defined

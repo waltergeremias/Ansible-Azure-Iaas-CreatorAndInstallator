@@ -1,0 +1,57 @@
+stages:
+ - BUILDVM
+ - DELETEVM
+variables:
+    AZURE_AD_USER: '$GITLAB_USER_LOGIN@gmail.com'
+    #AZURE_PASSWORD:
+    #PRUEBA 
+    AZURE_SUBSCRIPTION_ID: $AZURE_SUBSCRIPTION_ID
+    AZURE_TENANT: $AZURE_TENANT
+    AZURE_CERT_VALIDATION_MODE: 'ignore'
+BUILDVM:
+  stage: BUILDVM
+  tags:
+    - docker
+  image: ansible:latest
+  before_script:
+    - export AZURE_SUBSCRIPTION_ID="$(grep AZURE_SUBSCRIPTION vars/vms.yaml |cut -d"'" -f 2)"
+    - export AZURE_TENANT="$(grep AZURE_TENANT vars/vms.yaml |cut -d"'" -f 2)"
+    - export http_proxy=""
+    - export https_proxy=""
+    - az login    
+#    - "apt-get update; apt-get install -y corkscrew python3-dnspython"
+#    - echo "ProxyCommand /usr/bin/corkscrew proxy.us.ktc-int.net 8080 %h %p" >> /etc/ssh/ssh_config
+#    - echo "Port 443" >> /etc/ssh/ssh_config
+#    - /etc/init.d/ssh restart
+  allow_failure: true
+  script:
+    - ansible-playbook -i vars/vms.yaml main.yml -vvvv
+  when: manual
+  only:
+    # execute pipeline job only if explicitly started via web UI
+    - web   
+ 
+
+DELETEVM:
+  stage: DELETEVM
+  tags:
+    - docker
+  image: ansible:latest
+  before_script:
+    - export AZURE_SUBSCRIPTION_ID="$(grep AZURE_SUBSCRIPTION vars/vms.yaml |cut -d"'" -f 2)"
+    - export AZURE_TENANT="$(grep AZURE_TENANT vars/vms.yaml |cut -d"'" -f 2)"
+    - export http_proxy=""
+    - export https_proxy=""
+#    - apt-get update && apt-get install -y corkscrew
+    - az login
+#    - echo "ProxyCommand /usr/bin/corkscrew proxy.us.ktc-int.net 8080 %h %p" >> /etc/ssh/ssh_config
+#    - echo "Port 443" >> /etc/ssh/ssh_config
+#    - /etc/init.d/ssh restart
+  script:
+    - ansible-playbook -i vars/vms.yaml main.yml --extra-vars "del_env=absent"
+  when: manual
+  only:
+    # execute pipeline job only if explicitly started via web UI
+    - web
+
+

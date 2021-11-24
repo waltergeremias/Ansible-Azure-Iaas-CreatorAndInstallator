@@ -1,0 +1,48 @@
+---
+- name: Create VM Extension
+  azure_rm_virtualmachineextension:
+    name: openssh
+    location: "{{ location }}"
+    resource_group: "{{ resource_group }}"
+    virtual_machine_name: "{{ item }}" 
+    publisher: 'Microsoft.Compute'
+    virtual_machine_extension_type: 'CustomScriptExtension'
+    type_handler_version: '1.10'
+    settings: '{"commandToExecute": "powerShell.exe -ExecuTionPolicy bypass -enc {{script_ps1}}"}'
+    auto_upgrade_minor_version: true
+  with_inventory_hostnames:
+      - all
+  when: hostvars[item].public_ip == "yes" and hostvars[item].vm_OS|lower == "windows"  
+
+- name: Create VM Extension2
+  azure_rm_virtualmachineextension:
+    name: openssh
+    location: "{{ location }}"
+    resource_group: "{{ resource_group }}" 
+    virtual_machine_name: "{{ item }}"
+    publisher: 'Microsoft.Compute'
+    virtual_machine_extension_type: 'CustomScriptExtension'
+    type_handler_version: '1.10'    
+    settings: '{"commandToExecute": "powerShell.exe -ExecuTionPolicy bypass -enc {{script2_ps1}}"}'
+    auto_upgrade_minor_version: true
+  with_inventory_hostnames:
+      - all
+  when: hostvars[item].public_ip == "yes" and hostvars[item].vm_OS|lower == "windows"
+
+
+
+- name: Create VM Extension Linux
+  azure_rm_virtualmachineextension:
+    name: opensshlinux
+    location: "{{ location }}"
+    resource_group: "{{ resource_group }}"
+    virtual_machine_name: "{{ item }}"
+    publisher: Microsoft.Azure.Extensions
+    virtual_machine_extension_type: CustomScript
+    type_handler_version: '2.0'
+    settings: {"commandToExecute": "echo 'Port 8080' >> /etc/ssh/sshd_config &  /etc/init.d/ssh restart & echo '{{ public_key.stdout }}' >> /home/{{vm_user_name}}/.ssh/authorized_keys"} 
+    auto_upgrade_minor_version: true
+  with_inventory_hostnames:
+      - all
+  when: hostvars[item].public_ip == "yes" and hostvars[item].vm_OS|lower == "linux"
+

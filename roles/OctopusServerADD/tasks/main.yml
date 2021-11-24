@@ -1,0 +1,143 @@
+---
+
+######################## 
+- name: view all the octopus Spaces.
+  uri:
+    url: "{{OctoServer}}/api/spaces/all"
+    force_basic_auth: yes
+    method: GET
+    return_content: yes
+    headers:
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 200
+    body_format: json
+  register: OCTO_SPACE
+######################## 
+
+######################## 
+- name: view all the octopus Environments
+  uri:
+    url: "{{OctoServer}}/api/environments"
+    force_basic_auth: yes
+    method: GET
+    return_content: yes
+    headers:
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 200
+    body_format: json
+  register: OCTO_ENV
+######################## 
+
+
+######################## 
+- name: Register Space from json
+  set_fact: OCTO_SPACES='{{ OCTO_SPACE.json[0].Id }}'
+######################## 
+
+######################## 
+- name: view all the octopus Machines
+  uri:
+    url: "{{OctoServer}}/api/{{OCTO_SPACES}}/machines/all"
+    force_basic_auth: yes
+    method: GET
+    return_content: yes
+    headers:
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 200
+    body_format: json
+  register: OCTO_MACH
+######################## 
+
+######################## 
+- name: alternate way
+  debug: msg="{{ item }}"
+  with_flattened: "{{OctopusVMS1.results| selectattr('skipped', 'undefined') |map(attribute='item')| flatten(1) }}"
+  register: OC_SERV
+
+- name: alternate way to find some 'prefixed vars' in loop
+  debug: msg="{{ hostvars[item]['octo_roles']}}"
+  with_flattened: "{{OctopusVMS1.results| selectattr('skipped', 'undefined') |map(attribute='item')| flatten(1) }}"
+######################## 
+ 
+######################## 
+- name: Check octopus NewTarget
+  uri:
+    url: "{{OctoServer}}/api/{{OCTO_SPACES}}/machines/discover?host={{ item.item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower }}.{{ location }}.cloudapp.azure.com&port={{OctoPort}}&type=TentaclePassive"
+    force_basic_auth: yes
+    method: GET
+    return_content: yes
+    headers:
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 200
+    body_format: json
+  register: OCTO_NEW
+  with_flattened: "{{OC_SERV.results| flatten(1)}}"
+######################## 
+
+
+
+######################## 
+- name: Add new JSON Environment
+  set_fact:
+     Json_Env: "{\"Environment\":{\"Id\":\"\"},\"Name\":\"{{ env_name }}\",\"SpaceId\":\"{{OCTO_SPACES}}\",\"Description\":\"Our {{env_name}} Environment\",\"SortOrder\":\"0\",\"UseGuidedFailure\":\"false\"}"
+######################## 
+
+
+######################## 
+- name: ADD Environments to '{{env_name}}'
+  uri:
+    url: "{{OctoServer}}/api/environments"
+    force_basic_auth: yes
+    method: POST
+    return_content: yes
+    headers:
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 201
+    body:
+      '{{Json_Env|to_json}}'
+    body_format: json
+  register: OCTO_ENV
+######################## 
+
+
+######################## 
+- debug:
+    msg: "{{ OCTO_ENV.json.Id }}"
+######################## 
+
+
+######################## 
+- name: Register Environment from json
+  set_fact: OCTO_ENVID='{{ OCTO_ENV.json.Id }}'
+######################## 
+
+
+######################## 
+- name: Add new JSON Objects to List
+  set_fact:
+     Json_Load: "{\"Endpoint\":{\"CommunicationStyle\":\"{{item.json.Endpoint.CommunicationStyle}}\",\"Thumbprint\":\"{{item.json.Endpoint.Thumbprint}}\",\"Uri\":\"{{item.json.Endpoint.Uri}}\"},\"EnvironmentIds\":[\"{{OCTO_ENVID}}\"],\"Name\":\"{{item.json.Name}}\",\"Roles\":[\"{{ hostvars[item.item.item]['octo_roles']}}\"]}"
+  with_items: "{{ OCTO_NEW.results }}" 
+  register: Json1
+######################## 
+
+- debug:
+    msg: "{{item.ansible_facts.Json_Load|to_json}}"
+  with_items: "{{ Json1.results }}"
+
+
+######################## 
+- name: ADD Machines to Octopus
+  uri:
+    url: "{{OctoServer}}/api/{{OCTO_SPACES}}/machines"
+    force_basic_auth: yes
+    method: POST
+    return_content: yes
+    headers:
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 201
+    body:
+      '{{item.ansible_facts.Json_Load|to_json}}'
+    body_format: json
+  register: OCTO_CHECK
+  with_items: "{{Json1.results}}"  
+######################## 

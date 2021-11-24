@@ -1,0 +1,170 @@
+---
+
+- name: view all the octopus Spaces.
+  uri:
+    url: "{{OctoServer}}/api/spaces/all"
+    force_basic_auth: yes
+    method: GET
+    return_content: yes
+    headers:
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 200
+    body_format: json
+  register: OCTO_SPACE
+
+- name: view all the octopus Environments
+  uri: 
+    url: "{{OctoServer}}/api/environments"
+    force_basic_auth: yes 
+    method: GET  
+    return_content: yes
+    headers: 
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 200
+    body_format: json  
+  register: OCTO_ENV      
+
+
+- name: Register Space from json
+  set_fact: OCTO_SPACES='{{ OCTO_SPACE.json[0].Id }}'
+
+- name: view all the octopus Machines
+  uri:
+    url: "{{OctoServer}}/api/{{OCTO_SPACES}}/machines/all"
+    force_basic_auth: yes
+    method: GET
+    return_content: yes
+    headers:
+      X-Octopus-ApiKey: "{{OctoAPI}}"
+    status_code: 200
+    body_format: json
+  register: OCTO_MACH
+
+
+- name: Check octopus NewTarget
+ uri:
+   url: "{{OctoServer}}/api/{{OCTO_SPACES}}/machines/discover?host={{ item.item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower }}.{{ location }}.cloudapp.azure.com&port={{OctoPort}}&type=TentaclePassive"
+   force_basic_auth: yes
+   method: GET
+   return_content: yes
+   headers:
+     X-Octopus-ApiKey: "{{OctoAPI}}"
+   status_code: 200
+   body_format: json
+ register: OCTO_NEW
+ loop: "{{hostocto_create.results}}"
+ when: item.skipped is undefined
+
+
+- name: Register Environment from CommunicationStyle 
+ set_fact: OCTO_NEWCOMM="{{ OCTO_NEW.results |to_json|from_json| json_query(jquery) }}" 
+
+ vars: 
+   jquery: "[?item.item].json.Name"
+ loop: "{{hostocto_tocreate.result}}"
+ when: item.skipped is undefined
+
+
+- name: Register Environment from Thumbprint
+ set_fact: OCTO_NEWTHUM='{{ OCTO_NEW.results[item.json.Endpoint].Thumbprint }}'
+ with_items: '{{OCTO_NEW.results}}'
+ when: item.skipped is undefined
+
+- name: Register Environment from json Uri
+ set_fact: OCTO_NEWURI='{{ OCTO_NEW.results[item.json.Endpoint].Uri }}'
+ with_items: '{{OCTO_NEW.results}}'
+ when: item.skipped is undefined
+
+- name: Register Environment from Name 
+ set_fact: OCTO_NEWNAME='{{ OCTO_NEW.results[item.json].Name }}' 
+ with_items: '{{OCTO_NEW.results}}'
+ when: item.skipped is undefined
+
+- debug: 
+   msg: "{{ OCTO_NEW.results| json_query('[].json.Endpoint.CommunicationStyle')| list| regex_replace('{{LK}}','')|regex_replace('{{RK}}','') }}"
+ with_items: '{{hostocto_create}}'
+ when: item.skipped is undefined
+
+
+
+- name: Add new JSON Environment
+ set_fact:
+    Json_Env: "{\"Environment\":{\"Id\":\"\"},\"Name\":\"{{ env_name }}\",\"SpaceId\":\"{{OCTO_SPACES}}\",\"Description\":\"Our {{env_name}} Environment\",\"SortOrder\":\"0\",\"UseGuidedFailure\":\"false\"}"
+ with_items: '{{hostocto_create.results}}'
+ when: item.skipped is undefined
+
+
+- name: ADD Environments to '{{Octo_Server}}'
+ uri:
+   url: "{{OctoServer}}/api/environments"
+   force_basic_auth: yes
+   method: POST
+   return_content: yes
+   headers:
+     X-Octopus-ApiKey: "{{OctoAPI}}"
+   status_code: 201
+   body:
+     '{{Json_Env|to_json}}'
+   body_format: json
+ register: OCTO_ENV
+
+- debug: 
+   msg: "{{ OCTO_ENV.json.Id }}" 
+
+- name: Register Environment from json  
+ set_fact: OCTO_ENVID='{{ OCTO_ENV.json.Id }}' 
+
+
+
+- name: Add new JSON Objects to List
+ set_fact:
+    Json_Load: "{\"Endpoint\":{\"CommunicationStyle\":\"{{OCTO_NEWCOMM}}\",\"Thumbprint\":\"{{OCTO_NEWTHUM}}\",\"Uri\":\"{{OCTO_NEWURI}}\"},\"EnvironmentIds\":[\"{{OCTO_ENVID}}\"],\"Name\":\"{{OCTO_NEWNAME}}\",\"Roles\":[\"{{hostvars[item.item]['octo_roles']}}\"]}"
+ with_items: '{{hostocto_create.results}}'
+ when: item.skipped is undefined
+
+
+
+- name: ADD Machines to Octopus
+ uri:
+   url: "{{OctoServer}}/api/{{OCTO_SPACES}}/machines"
+   force_basic_auth: yes
+   method: POST
+   return_content: yes
+   headers:
+     X-Octopus-ApiKey: "{{OctoAPI}}"
+   status_code: 201
+   body:
+     '{{Json_Load|to_json}}'
+   body_format: json
+ register: OCTO_CHECK
+ with_items: '{{hostocto_create.results}}'
+ when: item.skipped is undefined
+
+
+
+#- name: Register OCTO_CHECK
+#  set_fact: OCTO_CHECKID='{{ OCTO_CHECK.results[0].json.Id }}'
+#
+#- name: Check Fact 
+#  set_fact:
+#     Json_Check: "{\"Tasks\":{\"Name\":\"Health\",\"Description\":\"Checking\"},\"Arguments\":{\"Timeout\":\"00:02:00\",\"MachineIds\":\"{{OCTO_CHECKID}}\"}}"
+#  with_inventory_hostnames:
+#      - CBOAPP
+#  when: hostvars[item].octo_client is defined and hostvars[item].octo_client == "yes" and hostvars[item].vm_OS|lower == "windows"
+#
+#- name: Check Machines on Octopus 
+#  uri: 
+#    url: "{{OctoServer}}/api/tasks"
+#    force_basic_auth: yes
+#    method: GET
+#    return_content: yes
+#    headers:  
+#      X-Octopus-ApiKey: "{{OctoAPI}}"
+#    status_code: 201
+#    body:
+#      '{{Json_Check}}'
+#    body_format: json 
+#  register: OCTO_OK
+#  with_inventory_hostnames:
+#      - CBOAPP    
+#  when: hostvars[item].octo_client is defined and hostvars[item].octo_client == "yes" and hostvars[item].vm_OS|lower == "windows"

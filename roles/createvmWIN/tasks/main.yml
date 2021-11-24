@@ -1,0 +1,106 @@
+---
+- name: Create NIC
+  azure_rm_networkinterface:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ item }}-Nic"
+    virtual_network:  {name: "{{ env_name }}{{ regionprefix }}-Subnet_{{ hostvars[item]['Subnet-Group'] }}", resource_group: "{{ resource_group }}"}
+    subnet: "Subnet{{ region }}-{{ hostvars[item]['Subnet-Group'] }}"
+    create_with_security_group: False
+    state: "{{ delete_env }}"
+    ip_configurations:
+      - name: "{{ item }}"
+        primary: True
+        private_ip_allocation_method: Static
+        private_ip_address: "{{ hostvars[item]['ip_host'] }}"        
+  with_inventory_hostnames:
+      - all  
+  ignore_errors: true
+
+- name: Create Public IP
+  azure_rm_networkinterface:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ item }}-Nic"
+    virtual_network:  {name: "{{ env_name }}{{ regionprefix }}-Subnet_{{ hostvars[item]['Subnet-Group'] }}", resource_group: "{{ resource_group }}"}
+    subnet: "Subnet{{ region }}-{{ hostvars[item]['Subnet-Group'] }}"
+    create_with_security_group: False
+    state: "{{ delete_env }}"
+    ip_configurations:
+      - name: "{{ item }}"
+        public_ip_address_name: "{{ item }}-IP"
+        public_ip_allocation_method: "Dynamic"
+  with_inventory_hostnames:
+      - all
+  when: hostvars[item].public_ip is defined and hostvars[item].public_ip == "yes"
+  ignore_errors: true
+
+- name: Add domain name to public IP
+  azure_rm_publicipaddress:
+    resource_group: "{{ resource_group }}"
+    name: "{{ item }}-IP"
+    allocation_method: "Dynamic"
+    domain_name: "{{ item | regex_replace ('\\-', '') | regex_replace ('\\_', '') |lower}}"
+  with_inventory_hostnames:
+      - all
+  when: hostvars[item].public_ip == "yes"
+  register: "publicIPs"
+
+- name: Create VM 
+  azure_rm_virtualmachine:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ item }}"
+    vm_size: "{{ hostvars[item]['vmw_Size'] }}"
+    os_type: "{{ hostvars[item]['vm_OS'] }}"
+    admin_username: "{{ vm_user_name }}"
+    admin_password: "{{ password }}"
+    network_interfaces: "{{ item }}-Nic"
+    managed_disk_type: "{{ hostvars[item]['os_disk_type'] }}"
+    availability_set: "{{ hostvars[item]['availSET'] |default(omit) }}"
+    os_disk_size_gb: "{{ hostvars[item]['os_disk_size'] }}"
+    license_type: "{{ hostvars[item]['license_OS_type'] |default(omit) }}"
+    started: "{{ hostvars[item]['start_vm'] | default('on', true)  }}"
+    state: "{{ delete_env }}"
+    image:
+      offer: "{{ hostvars[item]['offer_OS'] }}"
+      publisher: "{{ hostvars[item]['publisher_OS'] }}"
+      sku: "{{ hostvars[item]['SKU_version'] }}"
+      version: "{{ hostvars[item]['version_OS'] }}"
+  with_inventory_hostnames:
+      - all
+
+- name: Create managed disk D
+  azure_rm_manageddisk:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ item }}-datadisk1"  
+    disk_size_gb: "{{ hostvars[item]['D_disk_size'] }}"
+    storage_account_type: "{{ hostvars[item]['D_disk_type'] }}"
+    managed_by: "{{ item }}"
+    attach_caching: read_only
+  with_inventory_hostnames:
+      - all
+  when: hostvars[item].D_disk_size is defined  
+
+- name: Create managed disk E 
+  azure_rm_manageddisk:
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    name: "{{ item }}-datadisk2"
+    disk_size_gb: "{{ hostvars[item]['E_disk_size'] }}"
+    storage_account_type: "{{ hostvars[item]['E_disk_type'] }}"
+    managed_by: "{{ item }}" 
+    attach_caching: read_only 
+  with_inventory_hostnames:
+      - all
+  when: hostvars[item].E_disk_size is defined
+
+
+
+
+
+
+
+
+
